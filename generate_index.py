@@ -3,12 +3,12 @@ import json
 import zipfile
 import shutil
 
-# ==== CONFIG ==== #
+# ==== CONFIG ====
 REPO_USER = "bluemangodev"
 REPO_NAME = "svg-assets"
 REPO_URL = f"https://raw.githubusercontent.com/{REPO_USER}/{REPO_NAME}/main"
 
-ZIP_DIR = "."  # thư mục hiện tại
+ZIP_DIR = "."  # Thư mục chứa các file .zip
 THUMB_DIR = "thumbnails"
 TEMP_DIR = "temp_extract"
 
@@ -25,40 +25,29 @@ for filename in os.listdir(ZIP_DIR):
     filepath = os.path.join(ZIP_DIR, filename)
     name = os.path.splitext(filename)[0]
     title = name.replace("-", " ").replace("_", " ")
+
     zip_url = f"{REPO_URL}/{filename}"
-    "thumbnailUrl": f"{REPO_URL}/thumbnails/{name}.png"
-    thumb_url = f"{REPO_URL}/thumbnails/{name}.png"
+    thumb_filename = f"{name}.png"
+    thumb_url = f"{REPO_URL}/thumbnails/{thumb_filename}"
 
-    found_thumb = False
+    # Extract ZIP tạm thời
+    with zipfile.ZipFile(filepath, 'r') as zip_ref:
+        zip_ref.extractall(TEMP_DIR)
 
-    try:
-        with zipfile.ZipFile(filepath, 'r') as z:
-            candidates = [
-                m for m in z.namelist()
-                if m.lower().endswith((".png", ".jpg", ".jpeg"))
-                and "__MACOSX" not in m
-            ]
-            candidates.sort()  # đảm bảo thứ tự ổn định
-
-            for member in candidates:
-                z.extract(member, TEMP_DIR)
-                extracted_path = os.path.join(TEMP_DIR, member)
-                if not os.path.isfile(extracted_path):
-                    continue
-
-                # Chuyển đổi sang PNG nếu cần
-                ext = os.path.splitext(member)[1].lower()
-                dest_path = os.path.join(THUMB_DIR, f"{name}.png")
-
-                shutil.copy(extracted_path, dest_path)
-                found_thumb = True
+    # Tìm file ảnh đầu tiên trong ZIP
+    found_thumb = None
+    for root, _, files in os.walk(TEMP_DIR):
+        for file in files:
+            if file.lower().endswith((".png", ".jpg", ".jpeg")):
+                found_thumb = os.path.join(root, file)
                 break
+        if found_thumb:
+            break
 
-    except Exception as e:
-        print(f"❌ Lỗi khi xử lý {filename}: {e}")
-
-    if not found_thumb:
-        thumb_url = "https://upload.wikimedia.org/wikipedia/commons/3/3f/Placeholder.png"
+    # Nếu tìm thấy ảnh, copy về thumbnails/ và đổi sang .png nếu cần
+    if found_thumb:
+        dest_path = os.path.join(THUMB_DIR, thumb_filename)
+        shutil.copy(found_thumb, dest_path)
 
     output.append({
         "title": title,
@@ -67,11 +56,8 @@ for filename in os.listdir(ZIP_DIR):
         "category": "Other"
     })
 
-# Xóa tạm
-shutil.rmtree(TEMP_DIR, ignore_errors=True)
+    shutil.rmtree(TEMP_DIR, ignore_errors=True)
 
-# Ghi index.json
+# Ghi ra index.json
 with open("index.json", "w", encoding="utf-8") as f:
-    json.dump(output, f, indent=2)
-
-print(f"✅ Đã tạo index.json với {len(output)} mục.")
+    json.dump(output, f, indent=4, ensure_ascii=False)
