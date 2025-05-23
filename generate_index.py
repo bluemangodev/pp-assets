@@ -2,6 +2,7 @@ import os
 import json
 import zipfile
 import shutil
+from PIL import Image
 
 # ==== CONFIG ====
 REPO_USER = "bluemangodev"
@@ -30,6 +31,10 @@ for filename in os.listdir(ZIP_DIR):
     thumb_filename = f"{name}.png"
     thumb_url = f"{REPO_URL}/thumbnails/{thumb_filename}"
 
+    # Xóa thư mục tạm trước mỗi lần extract
+    shutil.rmtree(TEMP_DIR, ignore_errors=True)
+    os.makedirs(TEMP_DIR, exist_ok=True)
+
     # Extract ZIP tạm thời
     with zipfile.ZipFile(filepath, 'r') as zip_ref:
         zip_ref.extractall(TEMP_DIR)
@@ -44,11 +49,27 @@ for filename in os.listdir(ZIP_DIR):
         if found_thumb:
             break
 
-    # Nếu tìm thấy ảnh, copy về thumbnails/ và đổi sang .png nếu cần
+    # Nếu tìm thấy ảnh, chuyển sang .png nếu cần
     if found_thumb:
         dest_path = os.path.join(THUMB_DIR, thumb_filename)
-        shutil.copy(found_thumb, dest_path)
 
+        ext = os.path.splitext(found_thumb)[1].lower()
+        if ext == ".png":
+            shutil.copy(found_thumb, dest_path)
+        else:
+            # Chuyển JPG sang PNG
+            try:
+                img = Image.open(found_thumb).convert("RGBA")
+                img.save(dest_path, "PNG")
+            except Exception as e:
+                print(f"[{name}] ❌ Failed to convert image: {e}")
+                continue
+
+        print(f"[{name}] ✅ Thumbnail saved: {thumb_filename}")
+    else:
+        print(f"[{name}] ⚠️ No thumbnail found in ZIP")
+
+    # Ghi vào output JSON
     output.append({
         "title": title,
         "zipUrl": zip_url,
@@ -56,8 +77,8 @@ for filename in os.listdir(ZIP_DIR):
         "category": "Other"
     })
 
-    shutil.rmtree(TEMP_DIR, ignore_errors=True)
-
 # Ghi ra index.json
 with open("index.json", "w", encoding="utf-8") as f:
     json.dump(output, f, indent=4, ensure_ascii=False)
+
+print("\n🎉 Done generating index.json and thumbnails.")
