@@ -1,9 +1,6 @@
 name: Auto Update Index
 
 on:
-  push:
-    paths:
-      - "*.zip"
   workflow_dispatch:
 
 jobs:
@@ -18,17 +15,16 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Generate index.json
-        run: |
-          python generate_index.py
+      - name: Install dependencies
+        run: pip install pillow
 
-      - name: Commit and push index.json
+      - name: Generate index.json
+        run: python generate_index.py
+
+      - name: Commit and push index.json + thumbnails
         run: |
-          git config user.name github-actions
-          git config user.email actions@github.com
-          git stash --include-untracked
-          git pull --rebase
-          git stash pop || true
-          git add index.json
-          git commit -m "Auto-update index.json" || echo "No changes"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add index.json thumbnails/*.png
+          git commit -m "🔄 Auto-update index.json and thumbnails" || echo "No changes to commit"
           git push
