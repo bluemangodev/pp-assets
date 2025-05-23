@@ -26,7 +26,7 @@ for filename in os.listdir(ZIP_DIR):
     name = os.path.splitext(filename)[0]
     title = name.replace("-", " ").replace("_", " ")
     zip_url = f"{REPO_URL}/{filename}"
-    thumb_path = os.path.join(THUMB_DIR, f"{name}.png")
+    "thumbnailUrl": f"{REPO_URL}/thumbnails/{name}.png"
     thumb_url = f"{REPO_URL}/thumbnails/{name}.png"
 
     found_thumb = False
