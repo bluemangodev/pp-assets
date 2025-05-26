@@ -6,7 +6,7 @@ from PIL import Image
 
 # ==== CONFIG ====
 REPO_USER = "bluemangodev"
-REPO_NAME = "svg-assets"
+REPO_NAME = "pp-assets"
 REPO_URL = f"https://raw.githubusercontent.com/{REPO_USER}/{REPO_NAME}/main"
 
 ZIP_DIR = "."  # Thư mục chứa các file .zip
