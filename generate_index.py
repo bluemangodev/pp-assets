@@ -9,12 +9,11 @@ REPO_USER = "bluemangodev"
 REPO_NAME = "pp-assets"
 REPO_URL = f"https://raw.githubusercontent.com/{REPO_USER}/{REPO_NAME}/main"
 
-ZIP_DIR = "."  # Folder containing .zip files
+ZIP_DIR = "."  # Thư mục chứa các file .zip
 THUMB_DIR = "thumbnails"
 TEMP_DIR = "temp_extract"
-THUMB_SIZE = (300, 300)
 
-# Ensure folders exist
+# Tạo thư mục nếu chưa có
 os.makedirs(THUMB_DIR, exist_ok=True)
 os.makedirs(TEMP_DIR, exist_ok=True)
 
@@ -32,17 +31,15 @@ for filename in os.listdir(ZIP_DIR):
     thumb_filename = f"{name}.png"
     thumb_url = f"{REPO_URL}/thumbnails/{thumb_filename}"
 
-    # Reset temp extract
+    # Xóa thư mục tạm trước mỗi lần extract
     shutil.rmtree(TEMP_DIR, ignore_errors=True)
     os.makedirs(TEMP_DIR, exist_ok=True)
 
-    try:
-        with zipfile.ZipFile(filepath, 'r') as zip_ref:
-            zip_ref.extractall(TEMP_DIR)
-    except Exception as e:
-        print(f"[{name}] ❌ Failed to extract ZIP: {e}")
-        continue
+    # Extract ZIP tạm thời
+    with zipfile.ZipFile(filepath, 'r') as zip_ref:
+        zip_ref.extractall(TEMP_DIR)
 
+    # Tìm file ảnh đầu tiên trong ZIP
     found_thumb = None
     for root, _, files in os.walk(TEMP_DIR):
         for file in files:
@@ -52,27 +49,27 @@ for filename in os.listdir(ZIP_DIR):
         if found_thumb:
             break
 
+    # Nếu tìm thấy ảnh, chuyển sang .png nếu cần
     if found_thumb:
         dest_path = os.path.join(THUMB_DIR, thumb_filename)
-        try:
-            img = Image.open(found_thumb).convert("RGBA")
 
-            # Bỏ qua nếu ảnh trắng hoàn toàn
-            if img.getbbox() is None:
-                print(f"[{name}] ⚪ Skipped - Image is blank.")
+        ext = os.path.splitext(found_thumb)[1].lower()
+        if ext == ".png":
+            shutil.copy(found_thumb, dest_path)
+        else:
+            # Chuyển JPG sang PNG
+            try:
+                img = Image.open(found_thumb).convert("RGBA")
+                img.save(dest_path, "PNG")
+            except Exception as e:
+                print(f"[{name}] ❌ Failed to convert image: {e}")
                 continue
 
-            # Resize thumbnail về đúng kích thước
-            img.thumbnail(THUMB_SIZE, Image.ANTIALIAS)
-            img.save(dest_path, "PNG")
-
-            print(f"[{name}] ✅ Thumbnail saved: {thumb_filename}")
-        except Exception as e:
-            print(f"[{name}] ❌ Error processing image: {e}")
-            continue
+        print(f"[{name}] ✅ Thumbnail saved: {thumb_filename}")
     else:
-        print(f"[{name}] ⚠️ No image found in ZIP.")
+        print(f"[{name}] ⚠️ No thumbnail found in ZIP")
 
+    # Ghi vào output JSON
     output.append({
         "title": title,
         "zipUrl": zip_url,
@@ -80,7 +77,7 @@ for filename in os.listdir(ZIP_DIR):
         "category": "Other"
     })
 
-# Save index.json
+# Ghi ra index.json
 with open("index.json", "w", encoding="utf-8") as f:
     json.dump(output, f, indent=4, ensure_ascii=False)
 
